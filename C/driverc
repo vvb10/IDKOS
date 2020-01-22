@@ -1,0 +1,153 @@
+#include "idt.h"
+#include "asm.h"
+#include "isr.h"
+#include "libc.h"
+#include "driver.h"
+
+#define IRQ0 32
+#define IRQ1 33
+#define IRQ2 34
+#define IRQ3 35
+#define IRQ4 36
+#define IRQ5 37
+#define IRQ6 38
+#define IRQ7 39
+#define IRQ8 40
+#define IRQ9 41
+#define IRQ10 42
+#define IRQ11 43
+#define IRQ12 44
+#define IRQ13 45
+#define IRQ14 46
+#define IRQ15 47
+
+uint8_t keyboard_map[128] = {
+    0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 
+    '-', '=', '\b', '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 
+    'i', 'o', 'p', '[', ']', '\n', 0, 'a', 's', 'd', 'f', 'g', 
+    'h', 'j', 'k', 'l', ';', '\'', '`', 0, '\\', 'z', 'x', 'c', 
+    'v', 'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '-', 0, 0, 0, '+', 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+//static bool ctrl_down = false;
+static bool shift_down = false;
+static bool caps_lock_down = false;
+
+
+void keyboard_driver() {
+    uint8_t status = inb(0x64);
+    if(status & 0x01) {
+        int8_t scancode = inb(0x60);
+        if(scancode & 0x80 && scancode < 0){
+            scancode = scancode & 0x7F;
+            if(scancode == 42 || scancode == 54) {
+                shift_down = false;
+            }
+        } else {
+            if(scancode == 58) {
+                if(caps_lock_down == true) {
+                    caps_lock_down = false;
+                } else {
+                    caps_lock_down = true;
+                }
+                return;
+            }
+
+            // left arrow key
+            if(scancode == 75) {
+                if(column != 0) {
+                    column--;
+                } else {
+                    column = 80;
+                }
+                cursor_update();
+                return;
+            }
+            
+            // right arrow key
+            else if(scancode == 77) {
+                if(column != 80) {
+                    column++;
+                } else {
+                    column = 0;
+                }
+                cursor_update();
+                return;
+            }
+
+            // up arrow key
+            else if(scancode == 72) {
+                if(row == 0) {
+                    row = 25;
+                } else {
+                    row--;
+                }
+                cursor_update();
+                return;
+            }
+            
+            // down arrow key
+            else if(scancode == 80) {
+                if(row == 25) {
+                    row = 0;
+                } else {
+                    row++;
+                }
+                cursor_update();
+                return;
+            }
+
+            if(scancode == 42 || scancode == 54) {
+                shift_down = true;
+                return;
+            }
+
+            if(scancode == 91) {
+                column = 0, row = 0;
+            }
+
+            if((caps_lock_down == true || shift_down == true) && 
+            ((scancode >= 16 && scancode <= 25) 
+            || (scancode >= 30 && scancode <= 38) 
+            || (scancode >= 44 && scancode <= 50))) {
+                printc(keyboard_map[scancode]-32);
+                cursor_update();
+            } else if(shift_down == true) {
+                switch(keyboard_map[scancode]) {
+                    case '0': printc(')'); cursor_update(); return;
+                    case '1': printc('!'); cursor_update(); return;
+                    case '2': printc('@'); cursor_update(); return;
+                    case '3': printc('#'); cursor_update(); return;
+                    case '4': printc('$'); cursor_update(); return;
+                    case '5': printc('%'); cursor_update(); return;
+                    case '6': printc('^'); cursor_update(); return;
+                    case '7': printc('&'); cursor_update(); return;
+                    case '8': printc('*'); cursor_update(); return;
+                    case '9': printc('('); cursor_update(); return;
+                    case ' ': printc(' '); cursor_update(); return;
+                }
+            } else {
+                if(keyboard_map[scancode] == '\b') {
+                    column--;
+                    printc(' ');
+                    column--;
+                    cursor_update();
+                    return;
+                } else if(keyboard_map[scancode] == '\t') {
+                    printf("    ");
+                    cursor_update();
+                    return;
+                } else if(keyboard_map[scancode] != 0) {
+                    printc(keyboard_map[scancode]);
+                    cursor_update();
+                }
+            }
+        }
+    }
+}
+
+void init_keyboard() {
+    interrupt_handler(IRQ1, &keyboard_driver);
+}
