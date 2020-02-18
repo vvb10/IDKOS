@@ -1,151 +1,67 @@
-[BITS 32]
+%include "asm/asm_macros.inc"
 
-[extern kernel_main]
-[global start]
+bits 32
 
-section .multiboot
-	align 4
-	header_start:
-		dd 0xE85250D6 ; magic
-		dd 0 ; arch (i386)
-		dd (header_end-header_start) ; lengthsorry
-		dd 0x100000000 - (0xE85250D6 + 0 + (header_end-header_start)) ; checksum
-		dw 0 ; type
-    	dw 0 ; flags
-    	dd 8 ; size
-	header_end:
+global start
+global cmdline
+ 
+extern halt
+extern gdt_ptr
+extern gdt_ptrl
+extern cpuid_check
+extern kernel_main
+extern section_bss
+extern section_bss_end
+extern long_mode_check
+extern set_up_page_tables
+
 
 section .bss
-	align 16
-	stack_bottom:
-		resb 16384
-	stack_top:
+	cmdline resb 2048
 
 section .text
-	GDT64:
-		.Null: equ $ - GDT64
-			dw 0xFFFF                    ; Limit (low).
-			dw 0                         ; Base (low).
-			db 0                         ; Base (middle)
-			db 0                         ; Access.
-			db 1                         ; Granularity.
-			db 0                         ; Base (high).
-		.Code: equ $ - GDT64         ; The code descriptor.
-			dw 0                         ; Limit (low).
-			dw 0                         ; Base (low).
-			db 0                         ; Base (middle)
-			db 10011010b                 ; Access (exec/read).
-			db 10101111b                 ; Granularity, 64 bits flag, limit19:16.
-			db 0                         ; Base (high).
-		.Data: equ $ - GDT64         ; The data descriptor.
-			dw 0                         ; Limit (low).
-			dw 0                         ; Base (low).
-			db 0                         ; Base (middle)
-			db 10010010b                 ; Access (read/write).
-			db 00000000b                 ; Granularity.
-			db 0                         ; Base (high).
-		.Pointer:                    ; The GDT-pointer.
-			dw $ - GDT64 - 1             ; Limit.
-			dq GDT64  
-
 	start:
-		mov esp, stack_top
-		jmp cpuid_check
-	kernel:
-		call kernel_main
-		jmp hang
-
-	cpuid_check:
-		pushfd
-		pop eax
-		mov ecx, eax
-
-		xor eax, 1 << 21
-		push eax
-		popfd
-
-		pushfd
-		pop eax
-		push ecx
-
-		popfd
-		cmp eax, ecx
-		je no_cpuid ; cpuid is supported if je
-
-	long_mode_check:
-    	mov eax, 0x80000000
-    	cpuid                 
-    	cmp eax, 0x80000001 
-    	jb no_long_mode  
-
-		mov eax, 0x80000001
-		cpuid
-		test edx, 1 << 29
-		jz no_long_mode
-
-	table_clear:
-		mov edi, 0x1000
-		mov cr3, edi
+		mov esp, 0xeffff0
+		mov edi, section_bss
+		mov ecx, section_bss_end
+		sub ecx, section_bss
 		xor eax, eax
-		mov ecx, 4096
-		rep stosd
-		mov edi, cr3
+		rep stosb
 
-	link_tables:
-		mov DWORD [edi], 0x2003
-		add edi, 0x1000
-		mov DWORD [edi], 0x3003
-		add edi, 0x1000
-		mov DWORD [edi], 0x4003
-		add edi, 0x1000
-		mov ebx, 3
-		mov ecx, 512
+		mov esi, dword [ebx+16]
+		mov edi, cmdline - _kernel_physical_offset
+		mov ecx, 2047
 
-	entry_set:
-		mov DWORD [edi], ebx
-		add ebx, 0x1000
-		add edi, 8
-		loop entry_set
+	copy_cmdline:
+		lodsb
+		stosb
+		test al, al
+		jz near copy_cmdline_out
+		dec ecx
+		jnz near copy_cmdline
 
-	set_lm_bit:
-		mov ecx, 0xC0000080
-		rdmsr
-		or eax, 1 << 8
-		wrmsr
+	copy_cmdline_out:
+		call near cpuid_check
+		call near long_mode_check
+		call near set_up_page_tables
+		lgdt [gdt_ptrl - _kernel_physical_offset]
+		jmp 8:long_mode_init - _kernel_physical_offset
 
-	enable_paging:
-		mov eax, cr4
-		or eax, 1 << 5
-		mov cr4, eax
-		mov eax, cr0
-		or eax, 1 << 31
-		mov cr0, eax
-
-	load_gdt:
-		lgdt [GDT64.Pointer]
-		jmp GDT64.Code:segment_reset
-
-	no_long_mode:
-		jmp hang
-
-	no_cpuid:
-		jmp hang
-
-	hang:
-		cli
-		hlt
-		
-	hanging: 
-			jmp hanging
-
-
-	[BITS 64]
-	segment_reset:
-		mov ax, 0
+	long_mode_init:
+		bits 64
+		mov ax, 16
 		mov ss, ax
 		mov ds, ax
 		mov es, ax
 		mov fs, ax
 		mov gs, ax
-		cli
-		jmp kernel
+
+	jump_to_high_code:
+		mov rax, higher_half
+		jmp rax
+
+	higher_half:
+		mov rsp, _kernel_physical_offset + 0xeffff0
+		lgdt [gdt_ptr]
+		xor rbp, rbp
+		call kernel_main

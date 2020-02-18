@@ -11,11 +11,8 @@ kernel.elf: linker.ld $(CFILES) $(ASMFILES)
 	done
 
 	mv asm/*.o bin/
-
 	$(COMPILER) $(CLANGARAMS) $(CFILES)
-
 	mv *.o bin/
-
 	ld $(LDPARAMS) $< -o $@ $$(ls bin/*.o)
 
 iso: kernel.elf

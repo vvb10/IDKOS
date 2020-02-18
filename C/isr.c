@@ -18,11 +18,12 @@ __attribute__((interrupt)) void panicking_errorcode_isr_handler(__attribute__ ((
     panic("an irrecoverable error has occured: panicking...");
 }
 
-__attribute__((interrupt)) void double_fault(__attribute__ ((unused)) void *frame_ptr, uint64_t error_code) {
-    kprintf("phew, that was a close one: Error code: %d\n", error_code);
+__attribute__((interrupt)) void double_fault(iframe *frame, __attribute__ ((unused)) uint64_t error_code) {
+    kprintf("phew, that was a close one: Error code: %d\n", frame->ip);
 }
 
-__attribute__((interrupt)) void general_protection_fault(void __attribute__ ((unused)) *frame_ptr, __attribute__ ((unused)) uint64_t error_code) {
+__attribute__((interrupt)) void general_protection_fault(__attribute__ ((unused)) iframe *frame, uint64_t error_code) {
+    kprintf("%d ", error_code);
     panic("A GPF has occured: panicking...");
 }
 

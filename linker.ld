@@ -1,30 +1,32 @@
 ENTRY(start)
  
 SECTIONS {
-	. = 1M;
-	/* . = 0xFFFFFFFF80000000;
-	_kernel_begin = .; */
+	_kernel_physical_offset = 0xFFFFFFFFC0000000;
+	. = _kernel_physical_offset + 1M;
 
-	.text BLOCK(4K) : /* AT(ADDR(.text) - 0xFFFFFFFF80000000) */ {
-		*(.multiboot)
-		*(.text)
-		/* . = ALIGN(4096); */
+	.text ALIGN(4K) : {
+		section_text = . - _kernel_physical_offset;
+		KEEP(*(.multiboot))
+		KEEP(*(.text*))
+		section_text_end = . - _kernel_physical_offset;
 	}
  
-	.rodata BLOCK(4K) : ALIGN(4K) /* : AT(ADDR(.rodata) - 0xFFFFFFFF80000000) */ {
-		*(.rodata)
-		/* . = ALIGN(4096); */
+	.rodata ALIGN(4K) : {
+		section_rodata = . - _kernel_physical_offset;
+		KEEP(*(.rodata*))
+		section_rodata_end = . - _kernel_physical_offset;
 	}
 
-	.data BLOCK(4K) : ALIGN(4K) /* : AT(ADDR(.data) - 0xFFFFFFFF80000000) */ {
-		*(.data)
-		/* . = ALIGN(4096); */
+	.data ALIGN(4K) : {
+		section_data = . - _kernel_physical_offset;
+		KEEP(*(.data*))
+		section_data_end = . - _kernel_physical_offset;
 	}
  
-	.bss BLOCK(4K) : ALIGN(4K) /* : AT(ADDR(.bss) - 0xFFFFFFFF80000000) */ {
-		*(COMMON)
-		*(.bss)
-		/* . = ALIGN(4096); */
+	.bss ALIGN(4K) : {
+		section_bss = . - _kernel_physical_offset;
+		KEEP(*(COMMON))
+		KEEP(*(.bss*))
+		section_bss_end = . - _kernel_physical_offset;
 	}
-	/* _kernel_end = .; */
 }
