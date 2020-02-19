@@ -14,7 +14,6 @@ section .bss
     page_tables_end:
 
 bits 32
-
 section .text
     set_up_page_tables:
         xor eax, eax
@@ -69,7 +68,7 @@ section .text
         stosd
         xor eax, eax
         stosd
-
+        
         mov eax, p3l - _kernel_physical_offset
         or eax, 3
         mov edi, p4 - _kernel_physical_offset + 256 * 8
@@ -101,5 +100,5 @@ section .text
         mov eax, cr0
         or eax, 1 << 31
         mov cr0, eax
-        
+
         ret
