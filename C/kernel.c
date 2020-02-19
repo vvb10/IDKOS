@@ -5,7 +5,6 @@
 //#include "driver.h"
 
 void kernel_main() {
-    while(1) {}
     color = color_constructor(black, white);
     clear();
     kputs("WELCOME TO IDKOS\n");
@@ -13,5 +12,6 @@ void kernel_main() {
     diagnostic_message("GLOBAL DESCRIPTOR TABLE -----------------", true);
     init_idt();
     diagnostic_message("INTERRUPT DESCRIPTOR TABLE --------------", true);
+    while(1) {}
     //init_keyboard();
 }

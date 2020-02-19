@@ -1,7 +1,7 @@
 #include "headers/vga.h"
 #include "headers/klibc.h"
 
-volatile uint16_t *vga_buffer = (uint16_t*)0xB8000;
+volatile uint16_t *vga_buffer = (uint16_t*)0xFFFFFFFFC00B8000;
 int row = 0;
 int column = 0;
 int color = 15;

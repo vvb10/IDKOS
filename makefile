@@ -29,5 +29,5 @@ all:
 debug:
 	qemu-system-x86_64 --cdrom kernel.iso -s -S
 
-clean: -kernel.elf
-	rm kernel.elf kernel.iso
+clean: kernel.elf
+	-rm kernel.elf kernel.iso
