@@ -25,6 +25,7 @@ section .text
 
 	long_mode_check:
 		mov eax, 0x80000000
+		mov edi, ebx ; cause cpuid affects ebx for some reason
 		cpuid
 		cmp eax, 0x80000001
 		jb near hang
@@ -33,6 +34,7 @@ section .text
 		cpuid
 		test edx, 1 << 29
 		jz near hang
+		mov ebx, edi
 		ret
 
 	hang:

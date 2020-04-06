@@ -16,7 +16,7 @@ void clear() {
 }
 
 void printc(char character) {
-    index = (80 * row) + column;
+    index = 80 * row + column;
 
     if(row == 25 && column == 80) {
         row = 0;

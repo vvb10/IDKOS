@@ -53,5 +53,5 @@ void init_idt() {
         idt_set_gate(i, *panicking_isr_handler, disable_ist);
     }
 
-    idt_flush((uint64_t)&pIDT);
+    idt_flush((uint64_t)&pIDT); // interrupts not enabled until I make an APIC driver
 }

@@ -1,5 +1,4 @@
-#ifndef VGA_H
-#define VGA_H
+#pragma once
 
 #include <stdint.h>
 
@@ -29,5 +28,3 @@ int row;
 int index;
 int column;
 int color;
-
-#endif

@@ -17,10 +17,11 @@ extern set_up_page_tables
 
 
 section .bss
-	cmdline resb 2048
+	resb 4096*4
 
 section .text
 	start:
+		mov esi, eax
 		mov esp, 0xeffff0
 		mov edi, section_bss
 		mov ecx, section_bss_end
@@ -28,19 +29,6 @@ section .text
 		xor eax, eax
 		rep stosb
 
-		mov esi, dword [ebx+16]
-		mov edi, cmdline - _kernel_physical_offset
-		mov ecx, 2047
-
-	copy_cmdline:
-		lodsb
-		stosb
-		test al, al
-		jz near copy_cmdline_out
-		dec ecx
-		jnz near copy_cmdline
-
-	copy_cmdline_out:
 		call near cpuid_check
 		call near long_mode_check
 		call near set_up_page_tables
@@ -64,4 +52,10 @@ section .text
 		mov rsp, _kernel_physical_offset + 0xeffff0
 		lgdt [gdt_ptr]
 		xor rbp, rbp
+		mov rdi, rbx
 		call kernel_main
+
+	halt:
+		cli
+		hlt
+	halting: jmp halting

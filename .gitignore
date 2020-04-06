@@ -1,6 +1,6 @@
 .vscode
 kernel.iso
 kernel.elf
-iso/kernel.elf
+iso/*
 bin/
 iso/boot/kernel.iso

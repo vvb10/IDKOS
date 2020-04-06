@@ -1,5 +1,4 @@
-#ifndef IDT_H
-#define IDT_H
+#pragma once
 
 #include <stdint.h>
 #include "isr.h"
@@ -21,5 +20,3 @@ typedef struct idt_ptr {
 
 void irq_handler();
 extern void init_idt();
-
-#endif

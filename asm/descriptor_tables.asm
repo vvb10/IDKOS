@@ -1,7 +1,7 @@
 global idt_flush
 idt_flush:
     lidt [rdi]
-    sti
+    ; sti renable after making APIC driver
     ret
 
 global gdt_flush

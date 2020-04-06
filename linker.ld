@@ -29,4 +29,6 @@ SECTIONS {
 		KEEP(*(.bss*))
 		section_bss_end = . - _kernel_physical_offset;
 	}
+
+	_kernel_end = .;
 }

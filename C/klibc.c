@@ -2,6 +2,8 @@
 #include "headers/klibc.h"
 //#include "asm.h"
 
+extern void halt();
+
 void reverse(char *string, int length) {
     int start, end;
     char temp;
@@ -17,34 +19,16 @@ void reverse(char *string, int length) {
     }
 }
 
-char *itoa(int number, char *string, int base) {
-    int i = 0;
-    bool is_negative = false;
-    
-    if(number == 0) {
-        string[i] = '0';
-        string[++i] = '\0';
-        return string;
-    }
+char *itoa(uint64_t number, int base) {
+    static char charset[] = "0123456789ABCDEF";
+    static char buffer[65] = {0};
+    char *ptr = &buffer[65];
 
-    if(number < 0 && base == 10) {
-        is_negative = true;
-        number = -number;
-    }
-
-    while(number != 0) {
-        int remainder = number % base;
-        string[i++] = (remainder > 9) ? (remainder-10) + 'A' : remainder + '0';
-        number = number/base;
-    }
-
-    if(is_negative) {
-        string[i++] = '-';
-    }
-
-    string[i] = '\0';
-    reverse(string, i);
-    return string;
+    do {
+        *--ptr = charset[number % base];
+        number /= base;
+    } while (number != 0);
+    return ptr;
 }
 
 void *memset(void *source, int character, size_t size) {
@@ -79,7 +63,7 @@ void *memmove(void *destination, const void *source, size_t size) {
     return destination;
 }
 
-int32_t memcmp(const void *source1, const void *source2, size_t size) {
+int memcmp(const void *source1, const void *source2, size_t size) {
     const uint8_t *ptr1 = source1, *ptr2 = source2;
     while(size--) {
         if(*ptr1 != *ptr2) {
@@ -93,7 +77,7 @@ int32_t memcmp(const void *source1, const void *source2, size_t size) {
 
 size_t strlen(char *string) {
     size_t size = 0;
-    for(;string[size] != 0; size++);
+    for(;string[size]!= 0; size++);
     return size;
 } 
 
@@ -121,9 +105,8 @@ void diagnostic_message(char *string, bool state) {
 }
 
 void kprintf(char *format, ...) {
-    char string_buffer[32];
     char *traverse;
-    int integer;
+    long integer;
     char *string;
 
     va_list argument;
@@ -147,29 +130,52 @@ void kprintf(char *format, ...) {
 
         switch (*traverse) {
             case 'c': {
-                integer = va_arg(argument, int32_t);
+                integer = va_arg(argument, int);
                 printc(integer);
                 break;
             }
 
             case 'd': {
-                integer = va_arg(argument, int32_t);
+                integer = va_arg(argument, int64_t);
 
                 if(integer<0) {
                     integer = -integer;
                     printc('-');
                 }
 
-                itoa(integer, string_buffer, 10);
-                for(int32_t x=0; string_buffer[x] != '\0'; x++) {
-                    printc(string_buffer[x]);
+                char *string = itoa(integer, 10);
+                for(int x=0; string[x] != '\0'; x++) {
+                    printc(string[x]);
+                }
+                break;
+            }
+
+            case 'x': {
+                integer = va_arg(argument, uint64_t);
+                printc('0');
+                printc('x');
+                char *string = itoa(integer, 16);
+                for(int x=0; string[x] != '\0'; x++) {
+                    printc(string[x]);
+                }
+                break;
+            }
+
+            case 'b': {
+                integer = va_arg(argument, uint64_t);
+                printc('0');
+                printc('b');
+                char *string = itoa(integer, 2);
+
+                for(int x=0; string[x] != '\0'; x++) {
+                    printc(string[x]);
                 }
                 break;
             }
 
             case 's': {
                 string = va_arg(argument, char *);
-                for(int32_t x=0; string[x] != '\0'; x++) {
+                for(int x=0; string[x] != '\0'; x++) {
                     printc(string[x]);
                 }
                 break;
@@ -186,8 +192,16 @@ void kputs(char *string) {
     }
 }
 
+int byte_to_page(int byte_number) {
+    int i = byte_number % 4096;
+    if(i != 0) {
+        return byte_number / 4096 + 1;
+    }
+    return byte_number / 4096;
+}
+
 void panic(char *string) {
     kputs(string);
     printc('\n');
-    while(1) {}
+    halt();
 }
